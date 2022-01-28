@@ -1,15 +1,17 @@
-import java.util.concurrent.*;
+import java.util.*;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.LinkedList;
+
 
 public class prime_Finder   
 {
     //variables
-    public static final int MAX = 100000000;  //10^8
+    public static final int MAX = 100;  //10^8 100000000
     public  final static int nThreads = 8; //number of threads
     public static long nPrimes = 0; //number of primes after calculation
     public static long sumPrimes = 0; //sum of all primes found
-
+    public static Queue<Integer> maxQ = new LinkedList<Integer>();
     
     //arrays
 
@@ -29,7 +31,7 @@ public class prime_Finder
     private List<Thread> primeThreads;
 
     //Lock
-    public final Semaphore lock = new Semaphore(1, true);
+    public final static Object lock = new Object();
 
     public static void main(String args[])
     {
@@ -60,18 +62,15 @@ public class prime_Finder
             i.start();
         }
 
+        
         //mark 2 and 3 as true in primes[]
-        try
+        synchronized(lock)
         {
-            mainThread.lock.acquire();
+            
             mainThread.primes[2] = true;
             mainThread.primes[3] = true;
-            mainThread.lock.release();
         }
-        catch (InterruptedException e)
-        {
-            System.out.println(e); 
-        }
+       
 
         //wait for threads to finish
         for (Thread i : mainThread.primeThreads)
@@ -82,7 +81,7 @@ public class prime_Finder
             }
             catch(Exception e) 
             {
-                System.out.println("[Exception]: " + e);
+               // System.out.println("[Exception]: " + e);
             }
         }
         //end time
@@ -101,13 +100,23 @@ public class prime_Finder
         System.out.println("runtime: " + duration +"ms");
         System.out.println("# of primes: " + nPrimes );
         System.out.println("sum of primes: " + sumPrimes );
+        System.out.println("top 10 primes: ");
+        while(!maxQ.isEmpty()){
+            System.out.println(maxQ.remove());
+        }
     }
+   
     //gets sum and num of primes
     public void getPrimes(){
         for(int i = 0; i < MAX; i++){
             if(primes[i] == true){
                 nPrimes++;
                 sumPrimes += i;
+                maxQ.add(i);
+                if(maxQ.size() > 10){
+                    maxQ.remove(); 
+                }
+
             }
         }
     }
@@ -116,6 +125,9 @@ public class prime_Finder
 
 class prime_Runner implements Runnable
 {
+
+    private Object lock = new Object();
+
     private prime_Finder mainThread;
     private int tID;
     private int max;
@@ -137,7 +149,7 @@ class prime_Runner implements Runnable
         }
         catch (Exception e)
         {
-            System.out.println("[Exception]: " + e);
+           // System.out.println("[Exception]: " + e);
         }
     }
 
@@ -159,15 +171,9 @@ class prime_Runner implements Runnable
                 int n = (4 * x * x) + (y * y);
                 if (n <= max && (n % 12 == 1 || n % 12 == 5))
                 {
-                    try
+                    synchronized(lock)
                     {
-                        this.mainThread.lock.acquire();
-                        this.mainThread.primes[n] ^= true;
-                        this.mainThread.lock.release();
-                    }
-                    catch (InterruptedException e)
-                    {
-                        System.out.println(e); 
+                        this.mainThread.primes[n] ^= true;     
                     }
                 }
 
@@ -175,15 +181,9 @@ class prime_Runner implements Runnable
                 n = (3 * x * x) + (y * y);
                 if (n <= max && n % 12 == 7)
                 {
-                    try
+                    synchronized(lock)
                     {
-                        this.mainThread.lock.acquire();
                         this.mainThread.primes[n] ^= true;
-                        this.mainThread.lock.release();
-                    }
-                    catch (InterruptedException e)
-                    {
-                        System.out.println(e); 
                     }
                 }
 
@@ -191,16 +191,11 @@ class prime_Runner implements Runnable
                 n = (3 * x * x) - (y * y);
                 if (x > y && n <= max && n % 12 == 11)
                 {
-                    try
+                    synchronized(lock)
                     {
-                        this.mainThread.lock.acquire();
                         this.mainThread.primes[n] ^= true;
-                        this.mainThread.lock.release();
                     }
-                    catch (InterruptedException e)
-                    {
-                        System.out.println(e); 
-                    }
+                    
                 }
             }
         }
@@ -234,9 +229,8 @@ class prime_Runner implements Runnable
         // Mark all multiples of squares as non-prime
         for (int r = 5 + tID; r * r < max; r += mainThread.nThreads)
         {
-            try
+            synchronized(lock)
             {
-                this.mainThread.lock.acquire();
                 if (this.mainThread.primes[r])
                 {
                     for (int i = r * r; i < max; i += r * r)
@@ -247,12 +241,8 @@ class prime_Runner implements Runnable
                         }
                     }
                 }
-                this.mainThread.lock.release();
             }
-            catch (InterruptedException e)
-            {
-                System.out.println(e); 
-            }
+
         }
     }
 }
