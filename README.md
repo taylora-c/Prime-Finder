@@ -3,6 +3,7 @@
 Alisa Alarcon-Cometta
 
 to compile: javac prime_Finder.java
+
 to run: java prime_Finder
 
 To find primes, I used the Seive of Atkin approach. The class 'prime_Finder' creates and starts the threads. The prime_Runner class holds each thread as an object. The run function calls the isPrime function for each thread. Each thread is classified by a int thread ID. Each thread starts at the index 1 + ID and is incremented by ID at each iteration. This guaruntees work is divided evenly. 
