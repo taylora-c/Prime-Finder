@@ -1,18 +1,18 @@
 import java.util.*;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.LinkedList;
-
+import java.io.PrintWriter;
+import java.io.IOException;
 
 public class prime_Finder   
 {
     //variables
-    public static final int MAX = 100;  //10^8 100000000
+    public static final int MAX = 100000000;  //10^8 100000000
     public  final static int nThreads = 8; //number of threads
     public static long nPrimes = 0; //number of primes after calculation
     public static long sumPrimes = 0; //sum of all primes found
-    public static Queue<Integer> maxQ = new LinkedList<Integer>();
+    public static Queue<Integer> maxQ = new LinkedList<Integer>();  //holds top 10 values of primes
     
+
+
     //arrays
 
     /*
@@ -33,8 +33,11 @@ public class prime_Finder
     //Lock
     public final static Object lock = new Object();
 
-    public static void main(String args[])
+    public static void main(String args[]) throws IOException
     {
+        //open output file
+        PrintWriter out = new PrintWriter("primes.txt");
+
         prime_Finder mainThread = new prime_Finder();
 
         //set all values of prime[] to false
@@ -42,10 +45,12 @@ public class prime_Finder
             mainThread.primes[i] = false;
         }
 
+        // start the clock
+        long startTime = System.currentTimeMillis();
+
         // Create threads
         mainThread.primeRunner = new ArrayList<>();
         mainThread.primeThreads = new ArrayList<>();
-
         for(int i = 0; i < nThreads; i++){
             prime_Runner primeRunner = new prime_Runner(mainThread, i, MAX);
             mainThread.primeRunner.add(primeRunner);
@@ -53,8 +58,8 @@ public class prime_Finder
             mainThread.primeThreads.add(t);
         }
 
-         // start the clock
-        long startTime = System.currentTimeMillis();
+         
+        
 
         //start prime threads
         for (Thread i : mainThread.primeThreads)
@@ -95,18 +100,21 @@ public class prime_Finder
 
         long duration = endTime - startTime;
 
+        //print all info
         mainThread.getPrimes();
 
-        System.out.println("runtime: " + duration +"ms");
-        System.out.println("# of primes: " + nPrimes );
-        System.out.println("sum of primes: " + sumPrimes );
-        System.out.println("top 10 primes: ");
+        out.println("runtime: " + duration +"ms");
+        out.println("# of primes: " + nPrimes );
+        out.println("sum of primes: " + sumPrimes );
+        out.println("top 10 primes: ");
         while(!maxQ.isEmpty()){
-            System.out.println(maxQ.remove());
+            out.println(maxQ.remove());
         }
+
+        out.close();
     }
    
-    //gets sum and num of primes
+    //gets sum, num of primes, and the top 10 primes
     public void getPrimes(){
         for(int i = 0; i < MAX; i++){
             if(primes[i] == true){
@@ -125,13 +133,15 @@ public class prime_Finder
 
 class prime_Runner implements Runnable
 {
-
+    //lock
     private Object lock = new Object();
-
+    //class variables
     private prime_Finder mainThread;
+
     private int tID;
     private int max;
 
+    //thread constructor
     public prime_Runner(prime_Finder thread, int tID, int max)
     {
         this.mainThread = thread;
@@ -155,10 +165,9 @@ class prime_Runner implements Runnable
 
     /*Seive of Atkin approach
         sources for algoithm:
-            https://gist.github.com/lucafmi/729f6516799163b1a167ea233abbb3c6
             https://medium.com/smucs/primes-of-atkin-the-theoretical-optimization-of-prime-number-generation-e47107d61e28
     */
-    public  void isPrime(prime_Finder mainThread, int tID, int max)
+    public void isPrime(prime_Finder mainThread, int tID, int max)
     {   
         // Mark primes[n] is true if one of the following is true:
         for (int x = 1 + tID; x * x < max; x += mainThread.nThreads)
